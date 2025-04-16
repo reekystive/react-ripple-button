@@ -1,7 +1,9 @@
 words:
   - avenir
+  - bezier
   - grayscale
   - reekystive
+  - rgba
   - WCAG
 flagWords:
   - blacklist -> blocklist

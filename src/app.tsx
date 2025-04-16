@@ -1,57 +1,181 @@
-import { FC, useState } from 'react';
-import reactLogo from './assets/react.svg';
-import viteLogo from '/vite.svg';
+import * as Switch from '@radix-ui/react-switch';
+import { AnimatePresence, motion } from 'framer-motion';
+import { FC, useRef, useState } from 'react';
+import { cn } from './utils/cn';
 
-export const App: FC = () => {
-  const [count, setCount] = useState(0);
+interface ButtonWithRippleProps {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+  debug: boolean;
+}
+
+const ButtonWithRipple: FC<ButtonWithRippleProps> = ({ active, onClick, children, debug }) => {
+  const [ripples, setRipples] = useState<{ id: number }[]>([]);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const idCounter = useRef(0);
+
+  // Sky blue colors in RGB for the ripple effect - hardcoded
+  const skyBlueRGB = {
+    primary: '14, 165, 233', // sky-500
+    light: '56, 189, 248', // sky-400
+    dark: '3, 105, 161', // sky-700
+  };
+
+  const createRipple = () => {
+    if (!buttonRef.current) return;
+
+    // Create new ripple - always from center
+    const newRipple = { id: idCounter.current };
+    idCounter.current += 1;
+
+    // Add ripple
+    setRipples((prev) => [...prev, newRipple]);
+
+    // Remove ripple after animation completes
+    setTimeout(() => {
+      setRipples((prev) => prev.filter((ripple) => ripple.id !== newRipple.id));
+    }, 800);
+  };
+
+  const handleClick = () => {
+    onClick();
+
+    // Only create ripple effect when activating (going from inactive to active)
+    if (!active) {
+      createRipple();
+    }
+  };
+
+  const getNormalGradient = (color: string, opacity: number) => `
+    radial-gradient(
+      circle,
+      rgba(${color}, 0) 30%,
+      rgba(${color}, ${opacity}) 40%,
+      rgba(${color}, ${opacity}) 60%,
+      rgba(${color}, 0) 70%
+    )
+  `;
+
+  const getDebugGradient = (color: string, opacity: number) => `
+    radial-gradient(
+      circle,
+      transparent 30%,
+      red 30%,
+      red 40%,
+      rgba(${color}, ${opacity}) 40%,
+      rgba(${color}, ${opacity}) 60%,
+      blue 60%,
+      blue 70%,
+      transparent 70%
+    )
+  `;
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center">
-      <div className="flex flex-row">
-        <a
-          href="https://vitejs.dev"
-          target="_blank"
-          rel="noreferrer"
-          className="flex h-36 w-36 items-center justify-center"
-        >
-          <img
-            src={viteLogo}
-            className="h-36 p-6 transition-all duration-300 hover:drop-shadow-[0_0_2em_#646cffaa]"
-            alt="Vite logo"
-            width="144"
-            height="144"
+    <div className="relative isolate">
+      <AnimatePresence>
+        {ripples.map((ripple) => (
+          <motion.div
+            key={ripple.id}
+            initial={{
+              width: 0,
+              height: 0,
+              opacity: debug ? 1 : 0.9,
+              borderRadius: '100%',
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              pointerEvents: 'none',
+              background: debug
+                ? getDebugGradient(skyBlueRGB.primary, 0.7)
+                : getNormalGradient(skyBlueRGB.primary, 0.7),
+              zIndex: 0,
+              transform: 'translate(-50%, -50%)',
+            }}
+            animate={{
+              width: 400,
+              height: 400,
+              opacity: debug ? 1 : 0,
+              background: debug
+                ? [
+                    getDebugGradient(skyBlueRGB.primary, 0.7),
+                    getDebugGradient(skyBlueRGB.light, 0.7),
+                    getDebugGradient(skyBlueRGB.dark, 0.5),
+                  ]
+                : [
+                    getNormalGradient(skyBlueRGB.primary, 0.7),
+                    getNormalGradient(skyBlueRGB.light, 0.7),
+                    getNormalGradient(skyBlueRGB.dark, 0.5),
+                  ],
+            }}
+            transition={{
+              duration: 0.7,
+              ease: [0.25, 0.1, 0.25, 1],
+              background: {
+                duration: 0.7,
+                times: [0, 0.5, 1],
+                ease: [0.25, 0.1, 0.25, 1],
+              },
+              opacity: {
+                delay: 0,
+                duration: debug ? 0 : 0.7,
+                ease: 'linear',
+              },
+            }}
           />
-        </a>
-        <a
-          href="https://react.dev"
-          target="_blank"
-          rel="noreferrer"
-          className="flex h-36 w-36 items-center justify-center"
+        ))}
+      </AnimatePresence>
+      <button
+        ref={buttonRef}
+        className={cn(
+          'z-1 cursor-pointer rounded-xl px-4 py-2 text-sm font-medium transition-all',
+          active
+            ? 'border-[1.5px] border-sky-300 bg-sky-100 text-sky-600 hover:border-sky-400'
+            : 'border-[1.5px] border-gray-300 bg-transparent text-gray-900 hover:border-gray-400'
+        )}
+        onClick={handleClick}
+      >
+        {children}
+      </button>
+    </div>
+  );
+};
+
+export const App: FC = () => {
+  const [superpowerActive, setSuperpowerActive] = useState(false);
+  const [debugMode, setDebugMode] = useState(false);
+
+  const handleToggleSuperpower = () => {
+    setSuperpowerActive((prev) => !prev);
+  };
+
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center bg-slate-100">
+      <ButtonWithRipple active={superpowerActive} onClick={handleToggleSuperpower} debug={debugMode}>
+        Superpower mode
+      </ButtonWithRipple>
+
+      <div className="fixed right-5 bottom-5 flex items-center gap-2">
+        <label htmlFor="debug-mode" className="text-sm font-medium text-gray-700">
+          Debug Mode
+        </label>
+        <Switch.Root
+          id="debug-mode"
+          checked={debugMode}
+          onCheckedChange={setDebugMode}
+          className={cn(
+            'relative h-[25px] w-[42px] cursor-pointer rounded-full bg-gray-200 outline-none',
+            'data-[state=checked]:bg-sky-500'
+          )}
         >
-          <img
-            src={reactLogo}
-            className="h-36 p-6 transition-all duration-300 hover:drop-shadow-[0_0_2em_#61dafbaa] motion-safe:animate-[spin_20s_linear_infinite]"
-            alt="React logo"
-            width="144"
-            height="144"
+          <Switch.Thumb
+            className={cn(
+              'block h-[21px] w-[21px] translate-x-[2px] rounded-full bg-white transition-transform',
+              'data-[state=checked]:translate-x-[19px]'
+            )}
           />
-        </a>
+        </Switch.Root>
       </div>
-      <h1 className="my-2 text-[3.2em] leading-tight font-bold">Vite + React</h1>
-      <div className="py-8 text-center">
-        <button
-          className="cursor-pointer rounded-lg border border-transparent bg-[#f9f9f9] px-5 py-2.5 text-base font-medium transition-[border-color] duration-[0.25s] hover:border-[#646cff] focus:outline-none active:border-[#646cff] dark:bg-[#1a1a1a]"
-          onClick={() => {
-            setCount((count) => count + 1);
-          }}
-        >
-          count is {count}
-        </button>
-        <p className="my-4">
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="text-[#888]">Click on the Vite and React logos to learn more</p>
     </div>
   );
 };
