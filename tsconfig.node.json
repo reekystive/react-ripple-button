@@ -3,6 +3,7 @@
     "composite": true,
     "skipLibCheck": true,
     "module": "ESNext",
+    "target": "ESNext",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
@@ -14,6 +15,6 @@
     "checkJs": true,
     "outDir": "dist",
   },
-  "include": ["./*.ts", "./.*.ts", "./*.js", "./.*.js", "./*.mjs", "./.*.mjs"],
+  "include": ["./*.ts", "./.*.ts", "./*.js", "./.*.js", "./*.mjs", "./.*.mjs", "scripts"],
   "exclude": ["src", "node_modules"],
 }
