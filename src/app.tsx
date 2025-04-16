@@ -1,5 +1,5 @@
 import * as Switch from '@radix-ui/react-switch';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, Transition, Variants } from 'framer-motion';
 import { FC, useRef, useState } from 'react';
 import { GitHubIcon } from './icons/github.tsx';
 import { cn } from './utils/cn';
@@ -9,6 +9,8 @@ interface ButtonWithRippleProps {
   onClick: () => void;
   children: React.ReactNode;
   debug: boolean;
+  initialRingWidth?: number;
+  targetRingWidth?: number;
 }
 
 const ButtonWithRipple: FC<ButtonWithRippleProps> = ({ active, onClick, children, debug }) => {
@@ -17,11 +19,7 @@ const ButtonWithRipple: FC<ButtonWithRippleProps> = ({ active, onClick, children
   const idCounter = useRef(0);
 
   // Sky blue colors in RGB for the ripple effect - hardcoded
-  const skyBlueRGB = {
-    primary: '14, 165, 233', // sky-500
-    light: '56, 189, 248', // sky-400
-    dark: '3, 105, 161', // sky-700
-  };
+  const ringColor = '56, 189, 248';
 
   const createRipple = () => {
     if (!buttonRef.current) return;
@@ -32,11 +30,6 @@ const ButtonWithRipple: FC<ButtonWithRippleProps> = ({ active, onClick, children
 
     // Add ripple
     setRipples((prev) => [...prev, newRipple]);
-
-    // Remove ripple after animation completes
-    setTimeout(() => {
-      setRipples((prev) => prev.filter((ripple) => ripple.id !== newRipple.id));
-    }, 800);
   };
 
   const handleClick = () => {
@@ -48,29 +41,75 @@ const ButtonWithRipple: FC<ButtonWithRippleProps> = ({ active, onClick, children
     }
   };
 
-  const getNormalGradient = (color: string, opacity: number) => `
-    radial-gradient(
-      circle,
-      rgba(${color}, 0) 30%,
-      rgba(${color}, ${opacity}) 40%,
-      rgba(${color}, ${opacity}) 60%,
-      rgba(${color}, 0) 70%
-    )
-  `;
+  const handleAnimationComplete = (id: number) => {
+    setRipples((prev) => prev.filter((ripple) => ripple.id !== id));
+  };
 
-  const getDebugGradient = (color: string, opacity: number) => `
-    radial-gradient(
-      circle,
-      transparent 30%,
-      red 30%,
-      red 40%,
-      rgba(${color}, ${opacity}) 40%,
-      rgba(${color}, ${opacity}) 60%,
-      blue 60%,
-      blue 70%,
-      transparent 70%
-    )
-  `;
+  const getGradient = (config: { color: string; opacity: number; debug: boolean; ringWidth: number }) => {
+    const { color, opacity, debug, ringWidth } = config;
+    const TRANSITION_LENGTH = 25;
+    const innerEdge = 35 - ringWidth / 2;
+    const outerEdge = 35 + ringWidth / 2;
+
+    if (debug) {
+      return `
+        radial-gradient(
+          circle,
+          transparent ${Math.max(0, innerEdge - TRANSITION_LENGTH)}%,
+          #8b5cf620 ${Math.max(0, innerEdge - TRANSITION_LENGTH) + 0.5}%,
+          #8b5cf620 ${innerEdge}%,
+          #8b5cf6 ${innerEdge + 0.5}%,
+          #8b5cf6 ${outerEdge}%,
+          #8b5cf620 ${outerEdge + 0.5}%,
+          #8b5cf620 ${Math.min(70, outerEdge + TRANSITION_LENGTH)}%,
+          transparent ${Math.min(70, outerEdge + TRANSITION_LENGTH) + 0.5}%
+        )
+      `;
+    }
+
+    return `
+      radial-gradient(
+        circle,
+        rgba(${color}, 0) ${Math.max(0, innerEdge - TRANSITION_LENGTH)}%,
+        rgba(${color}, ${opacity}) ${innerEdge}%,
+        rgba(${color}, ${opacity}) ${outerEdge}%,
+        rgba(${color}, 0) ${Math.min(70, outerEdge + TRANSITION_LENGTH)}%
+      )
+    `;
+  };
+
+  const rippleVariants: Variants = {
+    initial: {
+      width: 0,
+      opacity: debug ? 1 : 0.9,
+      background: getGradient({ color: ringColor, opacity: 0.7, debug, ringWidth: 5 }),
+    },
+    animate: {
+      width: 800,
+      opacity: debug ? 1 : 0,
+      background: getGradient({ color: ringColor, opacity: 0.5, debug, ringWidth: 25 }),
+      transition: {
+        width: {
+          type: 'spring',
+          stiffness: 600,
+          damping: 100,
+          mass: 1,
+        },
+        opacity: {
+          type: 'spring',
+          stiffness: 600,
+          damping: 100,
+          mass: 0.5,
+        },
+        background: {
+          type: 'spring',
+          stiffness: 400,
+          damping: 100,
+          mass: 1,
+        },
+      } satisfies Record<string, Transition>,
+    },
+  };
 
   return (
     <div className="relative isolate">
@@ -78,50 +117,15 @@ const ButtonWithRipple: FC<ButtonWithRippleProps> = ({ active, onClick, children
         {ripples.map((ripple) => (
           <motion.div
             key={ripple.id}
-            initial={{
-              width: 0,
-              height: 0,
-              opacity: debug ? 1 : 0.9,
-              borderRadius: '100%',
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              pointerEvents: 'none',
-              background: debug
-                ? getDebugGradient(skyBlueRGB.primary, 0.7)
-                : getNormalGradient(skyBlueRGB.primary, 0.7),
-              zIndex: 0,
-              transform: 'translate(-50%, -50%)',
-            }}
-            animate={{
-              width: 400,
-              height: 400,
-              opacity: debug ? 1 : 0,
-              background: debug
-                ? [
-                    getDebugGradient(skyBlueRGB.primary, 0.7),
-                    getDebugGradient(skyBlueRGB.light, 0.7),
-                    getDebugGradient(skyBlueRGB.dark, 0.5),
-                  ]
-                : [
-                    getNormalGradient(skyBlueRGB.primary, 0.7),
-                    getNormalGradient(skyBlueRGB.light, 0.7),
-                    getNormalGradient(skyBlueRGB.dark, 0.5),
-                  ],
-            }}
-            transition={{
-              duration: 0.7,
-              ease: [0.25, 0.1, 0.25, 1],
-              background: {
-                duration: 0.7,
-                times: [0, 0.5, 1],
-                ease: [0.25, 0.1, 0.25, 1],
-              },
-              opacity: {
-                delay: 0,
-                duration: debug ? 0 : 0.7,
-                ease: 'linear',
-              },
+            className={cn(
+              'pointer-events-none absolute top-1/2 left-1/2 z-0 aspect-square -translate-x-1/2 -translate-y-1/2 scale-y-70 rounded-full',
+              debug && 'border-2 border-amber-500'
+            )}
+            variants={rippleVariants}
+            initial="initial"
+            animate="animate"
+            onAnimationComplete={() => {
+              handleAnimationComplete(ripple.id);
             }}
           />
         ))}
