@@ -4,6 +4,7 @@ words:
   - grayscale
   - reekystive
   - rgba
+  - Vite
   - WCAG
 flagWords:
   - blacklist -> blocklist
