@@ -1,6 +1,7 @@
 import * as Switch from '@radix-ui/react-switch';
 import { AnimatePresence, motion, Transition, Variants } from 'framer-motion';
 import { FC, useRef, useState } from 'react';
+import { DebugRippleCircle, RippleCircle } from './components/ripples.tsx';
 import { GitHubIcon } from './icons/github.tsx';
 import { cn } from './utils/cn';
 
@@ -9,17 +10,12 @@ interface ButtonWithRippleProps {
   onClick: () => void;
   children: React.ReactNode;
   debug: boolean;
-  initialRingWidth?: number;
-  targetRingWidth?: number;
 }
 
 const ButtonWithRipple: FC<ButtonWithRippleProps> = ({ active, onClick, children, debug }) => {
   const [ripples, setRipples] = useState<{ id: number }[]>([]);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const idCounter = useRef(0);
-
-  // Sky blue colors in RGB for the ripple effect - hardcoded
-  const ringColor = '56, 189, 248';
 
   const createRipple = () => {
     if (!buttonRef.current) return;
@@ -45,67 +41,24 @@ const ButtonWithRipple: FC<ButtonWithRippleProps> = ({ active, onClick, children
     setRipples((prev) => prev.filter((ripple) => ripple.id !== id));
   };
 
-  const getGradient = (config: { color: string; opacity: number; debug: boolean; ringWidth: number }) => {
-    const { color, opacity, debug, ringWidth } = config;
-    const TRANSITION_LENGTH = 25;
-    const innerEdge = 35 - ringWidth / 2;
-    const outerEdge = 35 + ringWidth / 2;
-
-    if (debug) {
-      return `
-        radial-gradient(
-          circle,
-          transparent ${Math.max(0, innerEdge - TRANSITION_LENGTH)}%,
-          #8b5cf620 ${Math.max(0, innerEdge - TRANSITION_LENGTH) + 0.5}%,
-          #8b5cf620 ${innerEdge}%,
-          #8b5cf6 ${innerEdge + 0.5}%,
-          #8b5cf6 ${outerEdge}%,
-          #8b5cf620 ${outerEdge + 0.5}%,
-          #8b5cf620 ${Math.min(70, outerEdge + TRANSITION_LENGTH)}%,
-          transparent ${Math.min(70, outerEdge + TRANSITION_LENGTH) + 0.5}%
-        )
-      `;
-    }
-
-    return `
-      radial-gradient(
-        circle,
-        rgba(${color}, 0) ${Math.max(0, innerEdge - TRANSITION_LENGTH)}%,
-        rgba(${color}, ${opacity}) ${innerEdge}%,
-        rgba(${color}, ${opacity}) ${outerEdge}%,
-        rgba(${color}, 0) ${Math.min(70, outerEdge + TRANSITION_LENGTH)}%
-      )
-    `;
-  };
-
   const rippleVariants: Variants = {
     initial: {
       width: 0,
-      opacity: debug ? 1 : 0.9,
-      background: getGradient({ color: ringColor, opacity: 0.7, debug, ringWidth: 5 }),
+      opacity: debug ? 1 : 0.6,
     },
     animate: {
       width: 800,
       opacity: debug ? 1 : 0,
-      background: getGradient({ color: ringColor, opacity: 0.5, debug, ringWidth: 25 }),
       transition: {
         width: {
-          type: 'spring',
-          stiffness: 600,
-          damping: 100,
-          mass: 1,
+          type: 'tween',
+          duration: 1.2,
+          ease: [0.2, 1, 0.5, 1], // cubic-bezier(0.2, 1, 0.5, 1)
         },
         opacity: {
-          type: 'spring',
-          stiffness: 600,
-          damping: 100,
-          mass: 0.5,
-        },
-        background: {
-          type: 'spring',
-          stiffness: 400,
-          damping: 100,
-          mass: 1,
+          type: 'tween',
+          duration: 1.2,
+          ease: [0, 1, 0.3, 1], // cubic-bezier(0, 1, 0.2, 1)
         },
       } satisfies Record<string, Transition>,
     },
@@ -117,19 +70,23 @@ const ButtonWithRipple: FC<ButtonWithRippleProps> = ({ active, onClick, children
         {ripples.map((ripple) => (
           <motion.div
             key={ripple.id}
-            className={cn(
-              'pointer-events-none absolute top-1/2 left-1/2 z-0 aspect-square -translate-x-1/2 -translate-y-1/2 scale-y-70 rounded-full',
-              debug && 'border-2 border-amber-500'
-            )}
+            className="pointer-events-none absolute top-1/2 left-1/2 z-0 aspect-square -translate-x-1/2 -translate-y-1/2 scale-y-70"
             variants={rippleVariants}
             initial="initial"
             animate="animate"
             onAnimationComplete={() => {
               handleAnimationComplete(ripple.id);
             }}
-          />
+          >
+            {debug ? (
+              <DebugRippleCircle ringWidth={20} width="100%" height="100%" className="text-[#8b5cf6]" />
+            ) : (
+              <RippleCircle ringWidth={20} width="100%" height="100%" className="text-sky-400" />
+            )}
+          </motion.div>
         ))}
       </AnimatePresence>
+
       <button
         ref={buttonRef}
         className={cn(
