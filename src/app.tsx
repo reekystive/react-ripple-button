@@ -1,6 +1,7 @@
 import * as Switch from '@radix-ui/react-switch';
 import { AnimatePresence, motion } from 'framer-motion';
 import { FC, useRef, useState } from 'react';
+import { GitHubIcon } from './icons/github.tsx';
 import { cn } from './utils/cn';
 
 interface ButtonWithRippleProps {
@@ -155,7 +156,19 @@ export const App: FC = () => {
         Superpower mode
       </ButtonWithRipple>
 
-      <div className="fixed right-5 bottom-5 flex items-center gap-2">
+      <div className="absolute bottom-3 left-3">
+        <a
+          href="https://github.com/reekystive/react-ripple-button"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center rounded-full bg-transparent p-3 transition-colors hover:bg-gray-200"
+          aria-label="GitHub Repository"
+        >
+          <GitHubIcon width={24} height={24} className="text-black" />
+        </a>
+      </div>
+
+      <div className="absolute right-5 bottom-5 flex items-center gap-2">
         <label htmlFor="debug-mode" className="text-sm font-medium text-gray-700">
           Debug Mode
         </label>
