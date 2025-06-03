@@ -9,7 +9,8 @@ await ghPages.publish(distPath, {
   dotfiles: false,
   push: true,
   history: false,
-  add: false,
+  message: 'Publish build to GitHub Pages',
+  remove: '**/{,.}*',
 });
 
 console.log('Artifacts committed and force pushed to gh-pages branch');
